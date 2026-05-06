@@ -291,12 +291,17 @@ class LocalContainerBackend(SandboxBackend):
         else:
             raise RuntimeError("Could not start sandbox container: all candidate ports are already allocated by Docker")
 
-        # When running inside Docker (DooD), sandbox containers are reachable via
-        # host.docker.internal rather than localhost (they run on the host daemon).
-        sandbox_host = os.environ.get("DEER_FLOW_SANDBOX_HOST", "localhost")
+        # When on a named Docker network, reach the sandbox directly by container
+        # name (Docker DNS). For host networking or no network, use sandbox_host:port.
+        network = os.environ.get("DEER_FLOW_SANDBOX_NETWORK")
+        if network and network.lower() != "host":
+            sandbox_url = f"http://{container_name}:8080"
+        else:
+            sandbox_host = os.environ.get("DEER_FLOW_SANDBOX_HOST", "localhost")
+            sandbox_url = f"http://{sandbox_host}:{port}"
         return SandboxInfo(
             sandbox_id=sandbox_id,
-            sandbox_url=f"http://{sandbox_host}:{port}",
+            sandbox_url=sandbox_url,
             container_name=container_name,
             container_id=container_id,
         )
@@ -342,12 +347,16 @@ class LocalContainerBackend(SandboxBackend):
         if not self._is_container_running(container_name):
             return None
 
-        port = self._get_container_port(container_name)
-        if port is None:
-            return None
+        network = os.environ.get("DEER_FLOW_SANDBOX_NETWORK")
+        if network and network.lower() != "host":
+            sandbox_url = f"http://{container_name}:8080"
+        else:
+            port = self._get_container_port(container_name)
+            if port is None:
+                return None
+            sandbox_host = os.environ.get("DEER_FLOW_SANDBOX_HOST", "localhost")
+            sandbox_url = f"http://{sandbox_host}:{port}"
 
-        sandbox_host = os.environ.get("DEER_FLOW_SANDBOX_HOST", "localhost")
-        sandbox_url = f"http://{sandbox_host}:{port}"
         if not wait_for_sandbox_ready(sandbox_url, timeout=5):
             return None
 
@@ -515,7 +524,7 @@ class LocalContainerBackend(SandboxBackend):
         network = os.environ.get("DEER_FLOW_SANDBOX_NETWORK")
 
         base_args = ["--rm", "-d"]
-        if not (network and network.lower() == "host"):
+        if not network:
             base_args.extend(["-p", port_mapping])
         base_args.extend(["--name", container_name])
         if network:
