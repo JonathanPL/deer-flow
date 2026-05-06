@@ -512,16 +512,15 @@ class LocalContainerBackend(SandboxBackend):
         else:
             port_mapping = f"{port}:8080"
 
-        cmd.extend(
-            [
-                "--rm",
-                "-d",
-                "-p",
-                port_mapping,
-                "--name",
-                container_name,
-            ]
-        )
+        network = os.environ.get("DEER_FLOW_SANDBOX_NETWORK")
+
+        base_args = ["--rm", "-d"]
+        if not (network and network.lower() == "host"):
+            base_args.extend(["-p", port_mapping])
+        base_args.extend(["--name", container_name])
+        if network:
+            base_args.extend(["--network", network])
+        cmd.extend(base_args)
 
         # Environment variables
         for key, value in self._environment.items():
