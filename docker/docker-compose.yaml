@@ -86,7 +86,8 @@ services:
       - DEER_FLOW_CHANNELS_GATEWAY_URL=${DEER_FLOW_CHANNELS_GATEWAY_URL:-http://gateway:8001}
       - DEER_FLOW_HOST_BASE_DIR=${DEER_FLOW_HOME}
       - DEER_FLOW_HOST_SKILLS_PATH=${DEER_FLOW_REPO_ROOT}/skills
-      - DEER_FLOW_SANDBOX_HOST=host.docker.internal
+      - DEER_FLOW_SANDBOX_HOST=${DEER_FLOW_SANDBOX_HOST:-host.docker.internal}
+      - DEER_FLOW_SANDBOX_NETWORK=${DEER_FLOW_SANDBOX_NETWORK:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
