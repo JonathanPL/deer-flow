@@ -422,6 +422,7 @@ class LocalContainerBackend(SandboxBackend):
 
         infos: list[SandboxInfo] = []
         sandbox_host = os.environ.get("DEER_FLOW_SANDBOX_HOST", "localhost")
+        network = os.environ.get("DEER_FLOW_SANDBOX_NETWORK")
         for container_name in container_names:
             data = inspections.get(container_name)
             if data is None:
@@ -429,7 +430,10 @@ class LocalContainerBackend(SandboxBackend):
                 continue
             created_at, host_port = data
             sandbox_id = container_name[len(self._container_prefix) + 1 :]
-            sandbox_url = f"http://{sandbox_host}:{host_port}" if host_port else ""
+            if network and network.lower() != "host":
+                sandbox_url = f"http://{container_name}:8080"
+            else:
+                sandbox_url = f"http://{sandbox_host}:{host_port}" if host_port else ""
 
             infos.append(
                 SandboxInfo(
